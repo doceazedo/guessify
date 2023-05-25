@@ -1,7 +1,8 @@
 import { Server } from "socket.io";
 import * as dotenv from "dotenv";
-import { joinRoom, playerRooms } from "./rooms";
+import { getPlayerRoomID, joinRoom } from "./rooms";
 import { setTrivia } from "./trivias";
+import { guess, startGame } from "./games";
 
 type JoinRoomPayload = {
   nickname: string;
@@ -12,10 +13,16 @@ type SetPlaylistPayload = {
   playlistID: string;
 };
 
+type GuessPayload = {
+  optionID: string;
+};
+
 dotenv.config();
 
 const io = new Server({
-  /* options */
+  cors: {
+    origin: "http://localhost:5173",
+  },
 });
 
 io.on("connection", (socket) => {
@@ -29,21 +36,37 @@ io.on("connection", (socket) => {
       {
         nickname: payload.nickname,
         socket,
+        score: 0,
       },
       payload.roomID
     );
     console.log(
       `✅ ${socket.id} joined room "${room.id}" as "${payload.nickname}"`
     );
-    callback({ ok: true });
+
+    const members = room.data.members.map((x) => ({
+      id: x.socket.id,
+      nickname: x.nickname,
+      score: x.score,
+    }));
+
+    callback({ roomID: room.id, members, ownerID: room.data.ownerID });
   });
 
   socket.on("set-playlist", async (payload: SetPlaylistPayload, callback) => {
-    const roomID = playerRooms.get(socket.id);
-    if (!roomID) throw Error(`Player ${socket.id} is not in a room`);
-
+    const roomID = getPlayerRoomID(socket.id);
     await setTrivia(roomID, payload.playlistID);
     callback({ ok: true });
+  });
+
+  socket.on("start", (callback) => {
+    const roomID = getPlayerRoomID(socket.id);
+    startGame(io, roomID);
+    callback({ ok: true });
+  });
+
+  socket.on("guess", (payload: GuessPayload, callback) => {
+    guess(io, socket.id, payload.optionID);
   });
 });
 

@@ -4,12 +4,14 @@ import { init } from "@paralleldrive/cuid2";
 type Player = {
   socket: Socket;
   nickname: string;
+  score: number;
 };
 
 type Room = {
   members: Player[];
   ownerID: string;
   triviaID?: string;
+  gameID?: string;
 };
 
 export const rooms = new Map<string, Room>();
@@ -39,4 +41,27 @@ const createRoom = (id: string, player: Player) => {
   return roomData;
 };
 
-const createId = init({ length: 5 });
+export const getPlayerRoomID = (playerID: string) => {
+  const room = playerRooms.get(playerID);
+  if (!room) throw Error(`Player "${playerID}" is not in a room`);
+  return room;
+};
+
+export const getRoom = (id: string) => {
+  const room = rooms.get(id);
+  if (!room) throw Error(`Could not find room "${id}"`);
+  return room;
+};
+
+export const updateRoom = (id: string, data: Partial<Room>) => {
+  const room = rooms.get(id);
+  if (!room) throw Error(`Could not update room: room "${id}" not found`);
+
+  rooms.set(id, {
+    ...room,
+    ...data,
+  });
+};
+
+const _createId = init({ length: 5 });
+const createId = () => _createId().toUpperCase();

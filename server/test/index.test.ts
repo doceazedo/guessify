@@ -1,4 +1,4 @@
-import { afterAll, assert, beforeAll, describe, it } from "vitest";
+import { afterAll, assert, beforeAll, describe, expect, it } from "vitest";
 import { io } from "socket.io-client";
 import * as dotenv from "dotenv";
 
@@ -33,7 +33,7 @@ describe("websocket server", () => {
     new Promise<void>((done) => {
       const nickname = "Doce";
       client.emit("join-room", { nickname }, (resp) => {
-        assert.isTrue(resp.ok);
+        expect(resp.roomID).toBeTruthy();
         done();
       });
     }));

@@ -1,6 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import { spotifyApi } from "./spotify";
-import { rooms } from "./rooms";
+import { updateRoom } from "./rooms";
 
 type Item = {
   id: string;
@@ -18,7 +18,6 @@ type Question = {
   type: "title" | "artist";
   track: Track;
   options: Item[];
-  answer: string;
 };
 
 const trivias = new Map<string, Question[]>();
@@ -27,21 +26,7 @@ export const setTrivia = async (roomID: string, playlistID: string) => {
   const questions = await getQuestionsFromPlaylist(playlistID);
   const triviaID = createId();
   trivias.set(triviaID, questions);
-
-  const room = rooms.get(roomID);
-  if (!room) throw Error(`Room "${roomID}" not found`);
-
-  rooms.set(roomID, {
-    ...room,
-    triviaID,
-  });
-  console.log({
-    trivia: questions,
-    room: {
-      ...room,
-      triviaID,
-    },
-  });
+  updateRoom(roomID, { triviaID });
 };
 
 const questionTypes = ["title", "artist"] as const;
@@ -83,8 +68,15 @@ const getQuestionsFromPlaylist = async (playlistID: string) => {
       type,
       track,
       options: [answer, ...otherAnswers].sort(() => Math.random() - 0.5),
-      answer: answer.id,
     };
   });
   return questions;
+};
+
+export const getTriviaQuestion = (id: string, round: number) => {
+  const trivia = trivias.get(id);
+  if (!trivia) throw Error(`Could not get trivia "${id}"`);
+
+  if (trivia.length < round) throw Error(`Out of bounds question`);
+  return trivia[round];
 };
